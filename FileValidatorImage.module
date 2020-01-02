@@ -8,7 +8,7 @@
  * This is used by existing file uploads, for example. This module adds support
  * for validation of common image bitmap formats: JPG, PNG, GIF. 
  * 
- * Copyright 2019 by Ryan Cramer for ProcessWire 3.x 
+ * Copyright 2020 by Ryan Cramer for ProcessWire 3.x 
  * 
  * USAGE
  * ~~~~~
@@ -42,6 +42,9 @@
  * @property int $maxWidth
  * @property int $maxHeight
  * 
+ * @method array|bool|null hasBadExif($filename, $verbose = false)
+ * @method bool isValidHook($filename)
+ * 
  * 
  */
 class FileValidatorImage extends FileValidatorModule {
@@ -50,7 +53,7 @@ class FileValidatorImage extends FileValidatorModule {
 		return array(
 			'title' => 'Image File Validator',
 			'summary' => 'Validate JPG, PNG, or GIF bitmap image files',
-			'version' => 1, 
+			'version' => 2, 
 			'validates' => array('jpg', 'jpeg', 'png', 'gif'),
 		);
 	}
@@ -189,9 +192,24 @@ class FileValidatorImage extends FileValidatorModule {
 			return false;
 		}
 
+		// attempt to load image in GD to make sure it is valid
+		$valid = $this->isValidGD($filename, $ext);
+		if($valid === false) {
+			$this->error($this->reason('bad-read', "icf$ext"));
+			return false;
+		} else if($valid === null) {
+			// we did not have a way to check, so valid is based on earlier checks
+		}
+	
+		// custom validations from hook(s)
+		if(!$this->isValidHook($filename)) {
+			$this->error($this->reason('bad-hook')); 
+			return false;
+		}
+
 		return true;
 	}
-	
+
 	/**
 	 * Get reason why last isValid() call returned false
 	 *
@@ -203,6 +221,28 @@ class FileValidatorImage extends FileValidatorModule {
 		$opt = array('last', 'string');
 		if($clear) $opt[] = 'clear';
 		return $this->errors($opt);
+	}
+	
+	/**
+	 * Is the image valid if attempted to open in GD’s function for image type?
+	 *
+	 * @param string $filename
+	 * @param string $ext
+	 * @return bool|null Returns true if valid, false if not, or null if we do not have a way to check
+	 *
+	 */
+	protected function isValidGD($filename, $ext) {
+		$valid = false;
+		if($ext === 'jpg' || $ext === 'jpeg' || $ext === 'jpe') {
+			if(@imagecreatefromjpeg($filename)) $valid = true;
+		} else if($ext === 'png') {
+			if(@imagecreatefrompng($filename)) $valid = true;
+		} else if($ext === 'gif') {
+			if(@imagecreatefromgif($filename)) $valid = true;
+		} else {
+			$valid = null; // not known
+		}
+		return $valid;
 	}
 
 	/**
@@ -352,7 +392,7 @@ class FileValidatorImage extends FileValidatorModule {
 	 * @return array|bool|null Returns null if exif data not available, array if verbose requested or boolean otherwise
 	 * 
 	 */
-	protected function hasBadExif($filename, $verbose = false) {
+	protected function ___hasBadExif($filename, $verbose = false) {
 		
 		if(!function_exists("\\exif_read_data")) return null;
 		$exif = exif_read_data($filename);
@@ -392,6 +432,19 @@ class FileValidatorImage extends FileValidatorModule {
 	}
 
 	/**
+	 * Is the image valid (hookable)
+	 * 
+	 * This is just here for hooks to optionally modify $event->return if they determine image not valid.
+	 * 
+	 * @param string $filename
+	 * @return bool
+	 * 
+	 */
+	protected function ___isValidHook($filename) {
+		return strlen($filename) ? true : false;
+	}
+
+	/**
 	 * Get named error/message string
 	 * 
 	 * @param string $name
@@ -418,6 +471,9 @@ class FileValidatorImage extends FileValidatorModule {
 				break;
 			case 'bad-read':
 				$reason = $this->_('Unable to read image file');
+				break;
+			case 'bad-hook':	
+				$reason = $this->_('Image failed one or more custom validations');
 				break;
 			case 'warn-mime':
 				$reason = $this->_('Mime type mismatch');

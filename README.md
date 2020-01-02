@@ -14,27 +14,22 @@ License: MPL 2.0
 This module performs the following validations on image files:
 
 - Extension must be one of: jpg, jpeg, gif, png.
-
-- Image type must match PHP’s IMAGETYPE_* constant for GIF, PNG or JPEG.
-
+- Image type must match PHP’s `IMAGETYPE_*` constant for GIF, PNG or JPEG.
 - Image type must be consistent with that specified by file extension.
-
 - MIME type must be consistent with that specified by file extension.   
-
 - MIME type must be valid, any one of the following:
   - image/gif
   - image/png
   - image/jpeg
   - image/pjpeg
   - image/x-png
-  
 - EXIF data must not contain specific PHP or Javascript malware.
-
 - Image must be greater than 1x1 in dimension. 
-
 - Image must be greater than specified minWidth/minHeight dimensions.
-
 - Image must be less than specified maxWidth/maxHeight dimensions. 
+- Image must be openable from GD’s image functions in PHP without error. 
+- Image must pass any custom validations assigned via hooks to an
+  `isValidHook()` method (optional, applies only if method hooked).   
 
 ## Install
 
