@@ -186,10 +186,12 @@ class FileValidatorImage extends FileValidatorModule {
 		if($this->minWidth || $this->minHeight || $this->maxWidth || $this->maxHeight) {
 			if(!$this->isValidSize($filename)) return false;
 		}
-		
-		if($this->hasBadExif($filename)) {
-			$this->error($this->reason('bad-exif'));
-			return false;
+	
+		if($imageType === IMAGETYPE_JPEG) {
+			if($this->hasBadExif($filename)) {
+				$this->error($this->reason('bad-exif'));
+				return false;
+			}
 		}
 
 		// attempt to load image in GD to make sure it is valid
@@ -395,7 +397,7 @@ class FileValidatorImage extends FileValidatorModule {
 	protected function ___hasBadExif($filename, $verbose = false) {
 		
 		if(!function_exists("\\exif_read_data")) return null;
-		$exif = exif_read_data($filename);
+		$exif = @exif_read_data($filename);
 		if(!is_array($exif)) return null;
 		
 		$exif = print_r($exif, true);
