@@ -53,7 +53,7 @@ class FileValidatorImage extends FileValidatorModule {
 		return array(
 			'title' => 'Image File Validator',
 			'summary' => 'Validate JPG, PNG, or GIF bitmap image files',
-			'version' => 2, 
+			'version' => 3, 
 			'validates' => array('jpg', 'jpeg', 'png', 'gif'),
 		);
 	}
